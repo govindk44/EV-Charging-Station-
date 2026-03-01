@@ -1,0 +1,8 @@
+Django>=5.1,<5.2
+djangorestframework>=3.15,<4.0
+django-cors-headers>=4.3,<5.0
+django-filter>=24.0,<25.0
+PyMySQL>=1.1,<2.0
+python-decouple>=3.8,<4.0
+celery>=5.4,<6.0
+redis>=5.0,<6.0

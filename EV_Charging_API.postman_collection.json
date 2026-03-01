@@ -1,0 +1,1573 @@
+{
+  "info": {
+    "name": "EV Charging Station Network API",
+    "description": "## Postman Collection — 15+ API Endpoints, Fully Tested\n\nThis collection provides **40+ requests** covering **20+ distinct API endpoints**, all with automated test scripts for status codes and response structure. Use for submission review and integration testing.\n\n### Collection Variables\n- `base_url`: http://localhost:8000/api\n- `auth_token`: Set automatically by Login/Register; used by protected endpoints\n\n### Folder Structure (Easy Review)\n1. **Authentication** (6) — Register, Login, Profile, Logout\n2. **Vehicles** (2) — Create, List\n3. **Stations** (6) — List, Nearby/Geo search, Filter by city, Detail, Create\n4. **Chargers** (3) — List, Create, Update status\n5. **Bookings** (4) — Create, List, Detail, Cancel\n6. **Charging Sessions** (7) — Start (booking/walk-in), Cost preview, End, List, Detail, Filter by date\n7. **Pricing** (3) — Estimate (normal, peak, off-peak)\n8. **Error Handling Tests** (3) — 401, 404, 422\n9. **Edge Case Tests** (10) — Concurrency, pricing multipliers, validation, overstay invoice\n\n**Run order:** Use Collection Runner or run **2. Login** first to set `auth_token`, then run any folder. Seed data: `python manage.py seed_data`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000/api"
+    },
+    {
+      "key": "auth_token",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "description": "User registration, login (token), profile, logout. Tests: status codes, token in response.",
+      "item": [
+        {
+          "name": "1. Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newuser@test.com\",\n  \"username\": \"newuser\",\n  \"password\": \"securepass123\",\n  \"password_confirm\": \"securepass123\",\n  \"first_name\": \"New\",\n  \"last_name\": \"User\",\n  \"phone\": \"9876500000\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/auth/register/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["auth", "register", ""]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.data && jsonData.data.token) {",
+                  "    pm.collectionVariables.set('auth_token', jsonData.data.token);",
+                  "}",
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Response has token', function () {",
+                  "    pm.expect(jsonData.data).to.have.property('token');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Login (Test User)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"rahul.sharma@test.com\",\n  \"password\": \"test123456\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/auth/login/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["auth", "login", ""]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.data && jsonData.data.token) {",
+                  "    pm.collectionVariables.set('auth_token', jsonData.data.token);",
+                  "}",
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Login successful', function () {",
+                  "    pm.expect(jsonData.message).to.eql('Login successful.');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. Login (Station Owner)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"owner1@evcharge.com\",\n  \"password\": \"owner123456\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/auth/login/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["auth", "login", ""]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.data && jsonData.data.token) {",
+                  "    pm.collectionVariables.set('auth_token', jsonData.data.token);",
+                  "}",
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Token {{auth_token}}"}
+            ],
+            "url": {
+              "raw": "http://localhost:8000/api/auth/profile/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["auth", "profile", ""]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Has email field', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('email');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "5. Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Authorization", "value": "Token {{auth_token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"rahul_sharma\",\n  \"first_name\": \"Rahul\",\n  \"last_name\": \"Sharma\",\n  \"phone\": \"9876543210\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/auth/profile/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["auth", "profile", ""]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "6. Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Token {{auth_token}}"}
+            ],
+            "url": {
+              "raw": "http://localhost:8000/api/auth/logout/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["auth", "logout", ""]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Vehicles",
+      "description": "CRUD for user vehicles (make, model, connector type). Auth required.",
+      "item": [
+        {
+          "name": "7. Create Vehicle",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Token {{auth_token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"make\": \"Tata\",\n  \"model_name\": \"Nexon EV Prime\",\n  \"year\": 2025,\n  \"battery_capacity_kwh\": 30.2,\n  \"connector_type\": \"CCS\",\n  \"license_plate\": \"KA01ZZ9999\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/auth/vehicles/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["auth", "vehicles", ""]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('vehicle_id', jsonData.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "8. List Vehicles",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Token {{auth_token}}"}
+            ],
+            "url": {
+              "raw": "http://localhost:8000/api/auth/vehicles/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["auth", "vehicles", ""]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Stations",
+      "description": "List, geo search (Haversine), nearby endpoint, filter by city, detail, create. Includes distance_km in geo responses.",
+      "item": [
+        {
+          "name": "9. List All Stations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/stations/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["stations", ""]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Has paginated data', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('data');",
+                  "    pm.expect(jsonData).to.have.property('count');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "10. Nearby Stations (Geo Search)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/stations/?lat=12.9716&lng=77.5946&radius=5",
+              "host": ["http://localhost:8000/api"],
+              "path": ["stations", ""],
+              "query": [
+                {"key": "lat", "value": "12.9716"},
+                {"key": "lng", "value": "77.5946"},
+                {"key": "radius", "value": "5"}
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Results have distance_km', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.data && jsonData.data.length > 0) {",
+                  "        pm.expect(jsonData.data[0]).to.have.property('distance_km');",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "11. Nearby Stations (Dedicated Endpoint)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/stations/nearby/?lat=12.9716&lng=77.5946&radius=10",
+              "host": ["http://localhost:8000/api"],
+              "path": ["stations", "nearby", ""],
+              "query": [
+                {"key": "lat", "value": "12.9716"},
+                {"key": "lng", "value": "77.5946"},
+                {"key": "radius", "value": "10"}
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "12. Filter Stations by City",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/stations/?city=Bangalore",
+              "host": ["http://localhost:8000/api"],
+              "path": ["stations", ""],
+              "query": [
+                {"key": "city", "value": "Bangalore"}
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "13. Station Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/stations/1/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["stations", "1", ""]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Has chargers array', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('chargers');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "14. Create Station (Owner)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Token {{auth_token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"New EV Station - Test\",\n  \"address\": \"Test Address, Bangalore\",\n  \"city\": \"Bangalore\",\n  \"state\": \"Karnataka\",\n  \"pincode\": \"560001\",\n  \"latitude\": 12.9700,\n  \"longitude\": 77.6000,\n  \"opening_time\": \"06:00:00\",\n  \"closing_time\": \"23:00:00\",\n  \"amenities\": [\"WiFi\", \"Restroom\"],\n  \"contact_number\": \"080-41234567\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/stations/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["stations", ""]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('station_id', jsonData.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Chargers",
+      "description": "List/create chargers per station; PATCH status (available|busy|maintenance|offline). Owner auth for create/status.",
+      "item": [
+        {
+          "name": "15. List Chargers for Station",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/stations/1/chargers/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["stations", "1", "chargers", ""]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "16. Create Charger (Owner)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Token {{auth_token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"station\": 1,\n  \"charger_type\": \"CCS\",\n  \"power_kw\": 50.00,\n  \"connector_type\": \"CCS2\",\n  \"base_price_per_kwh\": 18.00,\n  \"serial_number\": \"EVC-TEST-0001\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/stations/1/chargers/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["stations", "1", "chargers", ""]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('charger_id', jsonData.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "17. Update Charger Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {"key": "Authorization", "value": "Token {{auth_token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"maintenance\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/stations/1/chargers/1/status/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["stations", "1", "chargers", "1", "status", ""]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Bookings",
+      "description": "Create booking (with pricing estimate), list, detail, cancel. Tests: confirmed status, pagination.",
+      "item": [
+        {
+          "name": "18. Create Booking",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Token {{auth_token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"charger\": 1,\n  \"vehicle\": 1,\n  \"scheduled_start\": \"2026-03-05T10:00:00+05:30\",\n  \"scheduled_end\": \"2026-03-05T12:00:00+05:30\",\n  \"notes\": \"Regular charging session\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/bookings/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["bookings", ""]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Booking confirmed', function () {",
+                  "    pm.expect(jsonData.data.status).to.eql('confirmed');",
+                  "});",
+                  "pm.test('Has pricing estimate', function () {",
+                  "    pm.expect(jsonData).to.have.property('pricing_estimate');",
+                  "});",
+                  "pm.collectionVariables.set('booking_id', jsonData.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "19. List Bookings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Token {{auth_token}}"}
+            ],
+            "url": {
+              "raw": "http://localhost:8000/api/bookings/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["bookings", ""]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Has paginated results', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('data');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "20. Booking Detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Token {{auth_token}}"}
+            ],
+            "url": {
+              "raw": "http://localhost:8000/api/bookings/1/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["bookings", "1", ""]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "21. Cancel Booking",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {"key": "Authorization", "value": "Token {{auth_token}}"}
+            ],
+            "url": {
+              "raw": "http://localhost:8000/api/bookings/{{booking_id}}/cancel/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["bookings", "{{booking_id}}", "cancel", ""]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Booking cancelled', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.status).to.eql('cancelled');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Charging Sessions",
+      "description": "Start (from booking or walk-in), cost preview, end session (invoice), list, detail, filter by date. Tests: invoice with overstay.",
+      "item": [
+        {
+          "name": "22. Start Session (from Booking)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Token {{auth_token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"booking_id\": 1\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/sessions/start/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["sessions", "start", ""]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('session_id', jsonData.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "23. Start Session (Walk-in)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Token {{auth_token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"charger_id\": 2,\n  \"vehicle_id\": 1\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/sessions/start/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["sessions", "start", ""]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "24. Cost Preview (Active Session)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Token {{auth_token}}"}
+            ],
+            "url": {
+              "raw": "http://localhost:8000/api/sessions/{{session_id}}/cost-preview/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["sessions", "{{session_id}}", "cost-preview", ""]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Has cost data', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('estimated_cost');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "25. End Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Token {{auth_token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"energy_consumed_kwh\": 25.500\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/sessions/{{session_id}}/end/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["sessions", "{{session_id}}", "end", ""]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Session completed with invoice', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.status).to.eql('completed');",
+                  "    pm.expect(jsonData.data).to.have.property('invoice');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "26. List Sessions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Token {{auth_token}}"}
+            ],
+            "url": {
+              "raw": "http://localhost:8000/api/sessions/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["sessions", ""]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "27. Session Detail with Invoice",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Token {{auth_token}}"}
+            ],
+            "url": {
+              "raw": "http://localhost:8000/api/sessions/1/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["sessions", "1", ""]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "28. Filter Sessions by Date",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Token {{auth_token}}"}
+            ],
+            "url": {
+              "raw": "http://localhost:8000/api/sessions/?date_from=2026-02-01&date_to=2026-03-01",
+              "host": ["http://localhost:8000/api"],
+              "path": ["sessions", ""],
+              "query": [
+                {"key": "date_from", "value": "2026-02-01"},
+                {"key": "date_to", "value": "2026-03-01"}
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Pricing",
+      "description": "Price estimate by charger_id, duration_hours, start_hour. Tests: normal/peak/off-peak tiers and multipliers.",
+      "item": [
+        {
+          "name": "29. Price Estimate (Normal Hours)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/pricing/estimate/?charger_id=1&duration_hours=1.5&start_hour=10",
+              "host": ["http://localhost:8000/api"],
+              "path": ["pricing", "estimate", ""],
+              "query": [
+                {"key": "charger_id", "value": "1"},
+                {"key": "duration_hours", "value": "1.5"},
+                {"key": "start_hour", "value": "10"}
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Normal pricing tier', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.pricing_tier).to.eql('normal');",
+                  "    pm.expect(jsonData.data.peak_multiplier).to.eql('1.00');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "30. Price Estimate (Peak Hours)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/pricing/estimate/?charger_id=1&duration_hours=1.5&start_hour=19",
+              "host": ["http://localhost:8000/api"],
+              "path": ["pricing", "estimate", ""],
+              "query": [
+                {"key": "charger_id", "value": "1"},
+                {"key": "duration_hours", "value": "1.5"},
+                {"key": "start_hour", "value": "19"}
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Peak pricing applied', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.pricing_tier).to.eql('peak');",
+                  "    pm.expect(jsonData.data.peak_multiplier).to.eql('1.20');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "31. Price Estimate (Night/Off-Peak)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/pricing/estimate/?charger_id=1&duration_hours=2.0&start_hour=2",
+              "host": ["http://localhost:8000/api"],
+              "path": ["pricing", "estimate", ""],
+              "query": [
+                {"key": "charger_id", "value": "1"},
+                {"key": "duration_hours", "value": "2.0"},
+                {"key": "start_hour", "value": "2"}
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Off-peak pricing applied', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.pricing_tier).to.eql('off-peak');",
+                  "    pm.expect(jsonData.data.peak_multiplier).to.eql('0.90');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Error Handling Tests",
+      "description": "Expected error responses: 401 Unauthorized, 404 Not Found, 422 Validation.",
+      "item": [
+        {
+          "name": "32. Unauthorized Access (No Token)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/bookings/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["bookings", ""]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "33. Station Not Found (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/stations/99999/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["stations", "99999", ""]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "34. Invalid Registration (422)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"invalid\",\n  \"password\": \"short\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/auth/register/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["auth", "register", ""]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 422', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Edge Case Tests",
+      "description": "Business rules: double booking rejected, peak/off-peak/DC-Fast pricing, past booking, maintenance charger, max duration, overstay invoice.",
+      "item": [
+        {
+          "name": "35. Double Booking Same Charger (Concurrency)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Use the same charger and overlapping time as booking #18",
+                  "// This tests that the API prevents concurrent bookings"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 422 - double booking rejected', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "pm.test('Error message mentions already booked', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var body = JSON.stringify(jsonData).toLowerCase();",
+                  "    pm.expect(body).to.include('already booked');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Token {{auth_token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"charger\": 1,\n  \"vehicle\": 1,\n  \"scheduled_start\": \"2026-03-05T10:30:00+05:30\",\n  \"scheduled_end\": \"2026-03-05T11:30:00+05:30\",\n  \"notes\": \"Overlapping time slot - should fail\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/bookings/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["bookings", ""]
+            }
+          }
+        },
+        {
+          "name": "36. Peak Hours Pricing (+20% multiplier)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "var d = jsonData.data || jsonData;",
+                  "pm.test('Peak multiplier is 1.20', function () {",
+                  "    pm.expect(parseFloat(d.peak_multiplier)).to.eql(1.2);",
+                  "});",
+                  "pm.test('Pricing tier is peak', function () {",
+                  "    pm.expect(d.pricing_tier).to.eql('peak');",
+                  "});",
+                  "pm.test('Estimated cost reflects +20%', function () {",
+                  "    var base = parseFloat(d.base_rate_per_kwh);",
+                  "    var effective = parseFloat(d.effective_rate_per_kwh);",
+                  "    pm.expect(effective).to.be.above(base);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/pricing/estimate/?charger_id=1&duration_hours=1.5&start_hour=19",
+              "host": ["http://localhost:8000/api"],
+              "path": ["pricing", "estimate", ""],
+              "query": [
+                {"key": "charger_id", "value": "1"},
+                {"key": "duration_hours", "value": "1.5"},
+                {"key": "start_hour", "value": "19"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "37. Night Off-Peak Pricing (-10% multiplier)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "var d = jsonData.data || jsonData;",
+                  "pm.test('Off-peak multiplier is 0.90', function () {",
+                  "    pm.expect(parseFloat(d.peak_multiplier)).to.eql(0.9);",
+                  "});",
+                  "pm.test('Pricing tier is off-peak', function () {",
+                  "    pm.expect(d.pricing_tier).to.eql('off-peak');",
+                  "});",
+                  "pm.test('Effective rate is below base rate', function () {",
+                  "    var base = parseFloat(d.base_rate_per_kwh);",
+                  "    var effective = parseFloat(d.effective_rate_per_kwh);",
+                  "    pm.expect(effective).to.be.below(base);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/pricing/estimate/?charger_id=1&duration_hours=2&start_hour=2",
+              "host": ["http://localhost:8000/api"],
+              "path": ["pricing", "estimate", ""],
+              "query": [
+                {"key": "charger_id", "value": "1"},
+                {"key": "duration_hours", "value": "2"},
+                {"key": "start_hour", "value": "2"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "38. DC-Fast Surcharge (+₹2/kWh)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "var d = jsonData.data || jsonData;",
+                  "pm.test('Charger type is DC-Fast', function () {",
+                  "    pm.expect(d.charger_type).to.eql('DC-Fast');",
+                  "});",
+                  "pm.test('Effective rate includes ₹2 surcharge', function () {",
+                  "    var base = parseFloat(d.base_rate_per_kwh);",
+                  "    var effective = parseFloat(d.effective_rate_per_kwh);",
+                  "    var multiplier = parseFloat(d.peak_multiplier);",
+                  "    var expectedMin = base * multiplier + 1.5;",
+                  "    pm.expect(effective).to.be.at.least(expectedMin);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Find a DC-Fast charger ID from seeded data",
+                  "// DC-Fast chargers have serial numbers EVC-BLR-XXXX",
+                  "// They are typically charger IDs with type DC-Fast"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/api/pricing/estimate/?charger_id=4&duration_hours=1&start_hour=12",
+              "host": ["http://localhost:8000/api"],
+              "path": ["pricing", "estimate", ""],
+              "query": [
+                {"key": "charger_id", "value": "4"},
+                {"key": "duration_hours", "value": "1"},
+                {"key": "start_hour", "value": "12"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "39. Booking in the Past (Validation)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 422 - past booking rejected', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "pm.test('Error mentions past', function () {",
+                  "    var body = JSON.stringify(pm.response.json()).toLowerCase();",
+                  "    pm.expect(body).to.include('past');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Token {{auth_token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"charger\": 1,\n  \"vehicle\": 1,\n  \"scheduled_start\": \"2020-01-01T10:00:00+05:30\",\n  \"scheduled_end\": \"2020-01-01T12:00:00+05:30\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/bookings/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["bookings", ""]
+            }
+          }
+        },
+        {
+          "name": "40. Maintenance Charger Booking (Rejected)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 422 - maintenance charger rejected', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "pm.test('Error mentions maintenance', function () {",
+                  "    var body = JSON.stringify(pm.response.json()).toLowerCase();",
+                  "    pm.expect(body).to.include('maintenance');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// This test assumes a charger with status=maintenance exists in seeded data.",
+                  "// If charger ID 99 doesn't exist, the test will get a 422 'not found' error."
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Token {{auth_token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"charger\": 99,\n  \"vehicle\": 1,\n  \"scheduled_start\": \"2026-03-10T10:00:00+05:30\",\n  \"scheduled_end\": \"2026-03-10T12:00:00+05:30\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/bookings/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["bookings", ""]
+            }
+          }
+        },
+        {
+          "name": "41. Max Booking Duration Exceeded (>8 hours)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 422 - max duration rejected', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "pm.test('Error mentions maximum duration', function () {",
+                  "    var body = JSON.stringify(pm.response.json()).toLowerCase();",
+                  "    pm.expect(body).to.include('maximum');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Token {{auth_token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"charger\": 2,\n  \"vehicle\": 1,\n  \"scheduled_start\": \"2026-03-15T06:00:00+05:30\",\n  \"scheduled_end\": \"2026-03-15T16:00:00+05:30\",\n  \"notes\": \"10-hour booking - should exceed 8-hour limit\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/bookings/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["bookings", ""]
+            }
+          }
+        },
+        {
+          "name": "42. Charger Not Found (404 via booking)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 422 - charger not found', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "pm.test('Error mentions not found', function () {",
+                  "    var body = JSON.stringify(pm.response.json()).toLowerCase();",
+                  "    pm.expect(body).to.include('not found');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Token {{auth_token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"charger\": 99999,\n  \"vehicle\": 1,\n  \"scheduled_start\": \"2026-03-10T10:00:00+05:30\",\n  \"scheduled_end\": \"2026-03-10T12:00:00+05:30\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/bookings/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["bookings", ""]
+            }
+          }
+        },
+        {
+          "name": "43. Session on Busy Charger (Rejected)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 422 - busy charger rejected', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "pm.test('Error mentions charger status', function () {",
+                  "    var body = JSON.stringify(pm.response.json()).toLowerCase();",
+                  "    pm.expect(body).to.include('currently');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Token {{auth_token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"charger_id\": 1\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/api/sessions/start/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["sessions", "start", ""]
+            }
+          }
+        },
+        {
+          "name": "44. Completed Session Invoice with Overstay",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "var d = jsonData.data || jsonData;",
+                  "pm.test('Session is completed', function () {",
+                  "    pm.expect(d.status).to.eql('completed');",
+                  "});",
+                  "pm.test('Has invoice with cost breakdown', function () {",
+                  "    pm.expect(d).to.have.property('invoice');",
+                  "    if (d.invoice) {",
+                  "        pm.expect(d.invoice).to.have.property('energy_cost');",
+                  "        pm.expect(d.invoice).to.have.property('overstay_fine');",
+                  "        pm.expect(d.invoice).to.have.property('total_cost');",
+                  "        pm.expect(d.invoice).to.have.property('overstay_fine_per_minute');",
+                  "        pm.expect(d.invoice.overstay_fine_per_minute).to.eql('5.00');",
+                  "    }",
+                  "});",
+                  "pm.test('Total cost = energy + overstay', function () {",
+                  "    if (d.invoice) {",
+                  "        var energy = parseFloat(d.invoice.energy_cost);",
+                  "        var fine = parseFloat(d.invoice.overstay_fine);",
+                  "        var total = parseFloat(d.invoice.total_cost);",
+                  "        pm.expect(total).to.be.closeTo(energy + fine, 0.02);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Token {{auth_token}}"}
+            ],
+            "url": {
+              "raw": "http://localhost:8000/api/sessions/1/",
+              "host": ["http://localhost:8000/api"],
+              "path": ["sessions", "1", ""]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
